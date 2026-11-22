@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+# Packs SENAITE's database on the ZEO server; see wodby_senaite/pack.py.
+
+set -e
+
+exec /opt/senaite/parts/instance/bin/interpreter /usr/local/lib/python2.7/dist-packages/wodby_senaite/pack.py "${@}"

@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+
+# Writes a backup of the ZEO server's data to a .tar.gz file while the server
+# runs: a consistent copy of the database (Data.fs, made with repozo, which
+# reads only committed transactions) and the files (blobstorage). To restore,
+# stop the server and unpack the archive into /data.
+
+set -e
+
+if [[ -n "${DEBUG}" ]]; then
+    set -x
+fi
+
+out="${1:?Usage: senaite-backup FILE.tar.gz}"
+data=/data
+
+if [[ ! -f "${data}/filestorage/Data.fs" ]]; then
+    echo >&2 "Error: ${data}/filestorage/Data.fs does not exist."
+    exit 1
+fi
+
+# The copy is as large as the database; it is made in the container's
+# temporary space, not on the data volume.
+work=$(mktemp -d)
+trap 'rm -rf "${work}"' EXIT
+
+mkdir -p "${work}/repozo" "${work}/filestorage" "$(dirname "${out}")"
+/opt/senaite/bin/repozo --backup --full --repository="${work}/repozo" --file="${data}/filestorage/Data.fs"
+/opt/senaite/bin/repozo --recover --repository="${work}/repozo" --output="${work}/filestorage/Data.fs"
+
+# Blobs are written once and never changed, so files a later transaction
+# adds are only extra.
+tar -czf "${out}" \
+    -C "${work}" filestorage \
+    -C "${data}" --exclude=blobstorage/tmp blobstorage
+
+echo "Backup written to ${out}"

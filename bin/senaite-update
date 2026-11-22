@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+
+# Creates the SENAITE site on an empty database, or applies the upgrade steps
+# of a newer SENAITE, as one more client of the ZEO server. See
+# wodby_senaite/setup_site.py.
+
+set -e
+
+if [[ -n "${DEBUG}" ]]; then
+    set -x
+fi
+
+if [[ -z "${ZEO_ADDRESS}" ]]; then
+    echo >&2 "Error: ZEO_ADDRESS is not set."
+    exit 1
+fi
+
+# The app's own blob cache stays with the app.
+export SENAITE_BLOB_CACHE=/var/cache/senaite/blobcache-update
+mkdir -p /var/cache/senaite/instance /var/cache/senaite/chameleon "${SENAITE_BLOB_CACHE}"
+
+# Zope waits for the ZEO server on its own, but without a time limit.
+host="${ZEO_ADDRESS%:*}"
+port="${ZEO_ADDRESS##*:}"
+for i in $(seq 1 100); do
+    if timeout 2 bash -c "exec 3<>/dev/tcp/${host}/${port}" 2>/dev/null; then
+        break
+    fi
+    if [[ "${i}" -eq 100 ]]; then
+        echo >&2 "Error: the ZEO server ${ZEO_ADDRESS} is not reachable after 5 minutes."
+        exit 1
+    fi
+    sleep 3
+done
+
+exec /opt/senaite/bin/instance run /usr/local/lib/python2.7/dist-packages/wodby_senaite/setup_site.py
