@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "image": "wodby/senaite",
+  "versions": [
+    {
+      "version": {
+        "env": "SENAITE26"
+      },
+      "variants": [
+        {
+          "short": [
+            "{minor}"
+          ],
+          "full": "{version}"
+        }
+      ]
+    }
+  ]
+}
