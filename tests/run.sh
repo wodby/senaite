@@ -120,6 +120,9 @@ listing=$(docker exec "${zeo}" tar -tzf /tmp/backup/senaite.tar.gz)
 expect "The backup has the database" "${listing}" "filestorage/Data.fs"
 expect "The backup has the files" "${listing}" ".blob"
 docker cp "${zeo}:/tmp/backup/senaite.tar.gz" "${backup_dir}/senaite.tar.gz"
+# The restore runs as the image's user (uid 1000), which must read the
+# runner's temporary directory.
+chmod -R a+rX "${backup_dir}"
 
 # Restores the backup into a new volume and replaces the ZEO server with one
 # that uses it, then restarts SENAITE.
